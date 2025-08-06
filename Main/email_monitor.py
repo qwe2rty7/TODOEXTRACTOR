@@ -6,7 +6,7 @@ import msal
 import requests
 import anthropic
 from todo_manager import TodoManager
-from github_sync import GitHubSync
+from secure_storage import PrivateGitHub, DropboxStorage, LocalEncrypted
 
 load_dotenv()
 
@@ -41,8 +41,14 @@ class EmailMonitor:
         # Initialize todo manager
         self.todo_manager = TodoManager()
         
-        # Initialize GitHub sync
-        self.github_sync = GitHubSync()
+        # Initialize secure storage (use whichever is configured)
+        self.secure_storage = None
+        if os.getenv('GITHUB_PRIVATE_REPO'):
+            self.secure_storage = PrivateGitHub()
+        elif os.getenv('DROPBOX_ACCESS_TOKEN'):
+            self.secure_storage = DropboxStorage()
+        else:
+            self.secure_storage = LocalEncrypted()
         
     def get_access_token(self):
         """Get access token for Graph API"""
@@ -434,6 +440,13 @@ class EmailMonitor:
                 
             print(f"Saved {len(structured_todos)} structured todo(s) to {filepath}")
             
+            # Upload to secure storage
+            if self.secure_storage:
+                if hasattr(self.secure_storage, 'upload_todos'):
+                    self.secure_storage.upload_todos(structured_todos)
+                elif hasattr(self.secure_storage, 'save_todos'):
+                    self.secure_storage.save_todos(structured_todos)
+            
         except Exception as e:
             print(f"ERROR saving structured todos: {e}")
     
@@ -512,9 +525,6 @@ class EmailMonitor:
                             subject = email['subject']
                             source_info = f"Extracted from forwarded email: {subject}"
                             self.todo_manager.save_todos_to_file(simple_todos, source_info)
-                            
-                            # Sync to GitHub
-                            self.github_sync.sync_todos()
                         else:
                             print("\n❌ No action items found for you")
                         
@@ -561,9 +571,6 @@ class EmailMonitor:
                     subject = email['subject']
                     source_info = f"Extracted from email: {sender} - {subject}"
                     self.todo_manager.save_todos_to_file(simple_todos, source_info)
-                    
-                    # Sync to GitHub
-                    self.github_sync.sync_todos()
                 else:
                     print("\n❌ No action items found for you")
                     
