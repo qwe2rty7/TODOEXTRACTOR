@@ -31,10 +31,15 @@ def main():
     
     try:
         # Initialize monitors
+        logger.info("Initializing EmailMonitor...")
         email_monitor = EmailMonitor()
-        fireflies_monitor = FirefliesMonitor()
+        logger.info("EmailMonitor initialized successfully")
         
-        logger.info("Monitors initialized successfully")
+        logger.info("Initializing FirefliesMonitor...")
+        fireflies_monitor = FirefliesMonitor()
+        logger.info("FirefliesMonitor initialized successfully")
+        
+        logger.info("All monitors initialized successfully")
         logger.info(f"Monitoring email: {email_monitor.user_email}")
         
         # Main monitoring loop
@@ -44,7 +49,7 @@ def main():
                 email_monitor.check_new_emails()
                 
                 # Check Fireflies transcripts
-                fireflies_monitor.check_recent_transcripts()
+                fireflies_monitor.check_new_transcripts()
                 
                 # Wait before next check
                 logger.info(f"Waiting 30 seconds before next check...")
