@@ -1,0 +1,12 @@
+.env
+*.pyc
+__pycache__
+.git
+.gitignore
+*.log
+.vscode
+.idea
+*.md
+!README.md
+structured_todos/
+todos.txt
