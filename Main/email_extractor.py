@@ -22,12 +22,12 @@ class CombinedMonitor:
             # Night time: check every 5 minutes (300 seconds)
             interval = 300
             period = "night"
-        elif hour >= 17 or hour < 9:  
-            # Evening/early morning: check every 2 minutes (120 seconds)
+        elif (hour >= 17 and hour < 21) or (hour >= 5 and hour < 7):  
+            # Evening (5PM-9PM) and early morning (5AM-7AM): check every 2 minutes (120 seconds)
             interval = 120
             period = "evening/early morning"
         else:
-            # Business hours (9 AM - 5 PM): check every 30 seconds
+            # Business hours (7 AM - 5 PM): check every 30 seconds
             interval = 30
             period = "business hours"
             
@@ -41,7 +41,8 @@ class CombinedMonitor:
             print(f"Monitoring: Emails + Fireflies transcripts")
         else:
             print(f"📧 Monitoring: Emails only")
-        print(f"Smart scheduling: 30s (business), 2min (evening), 5min (night)\n")
+        print(f"Smart scheduling: 30s (7AM-5PM), 2min (5-7AM, 5-9PM), 5min (9PM-5AM)")
+        print(f"Transcript checks: 1min (business), 10min (evening), 15min (night)\n")
         
         transcript_check_counter = 0
         last_period = ""  # Track when we switch time periods
@@ -60,13 +61,13 @@ class CombinedMonitor:
                 # Adjust transcript check frequency based on current interval
                 # During night hours (5min intervals), check transcripts every 3 cycles (15min)
                 # During evening hours (2min intervals), check transcripts every 5 cycles (10min) 
-                # During business hours (30s intervals), check transcripts every 20 cycles (10min)
+                # During business hours (30s intervals), check transcripts every 2 cycles (1min) - fast for post-call updates
                 if check_interval >= 300:  # Night mode
                     transcript_check_interval = 3
                 elif check_interval >= 120:  # Evening mode
                     transcript_check_interval = 5
                 else:  # Business hours
-                    transcript_check_interval = 20
+                    transcript_check_interval = 2
                 
                 # Check for new emails
                 self.email_monitor.check_new_emails()
