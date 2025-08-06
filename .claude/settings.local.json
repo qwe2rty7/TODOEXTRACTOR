@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "WebFetch(domain:docs.fireflies.ai)",
+      "Bash(python:*)"
+    ],
+    "deny": []
+  }
+}
