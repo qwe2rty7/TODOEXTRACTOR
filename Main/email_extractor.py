@@ -15,9 +15,9 @@ class CombinedMonitor:
     def monitor_all(self, check_interval=30, check_transcripts=True):
         """Main monitoring loop for both emails and Fireflies transcripts"""
         user_email = os.getenv('USER_EMAIL', 'your email')
-        print(f"📧 Starting combined monitor for {user_email}")
+        print(f"Starting combined monitor for {user_email}")
         if check_transcripts:
-            print(f"📧 Monitoring: Emails + Fireflies transcripts")
+            print(f"Monitoring: Emails + Fireflies transcripts")
         else:
             print(f"📧 Monitoring: Emails only")
         print(f"Checking every {check_interval} seconds...\n")
@@ -42,14 +42,14 @@ class CombinedMonitor:
                     transcript_check_counter += 1
                 
                 # Wait before next check
-                print(f"\n💤 Waiting {check_interval}s before next check...")
+                print(f"\nWaiting {check_interval}s before next check...")
                 time.sleep(check_interval)
                 
             except KeyboardInterrupt:
-                print("\n👋 Stopping monitor...")
+                print("\nStopping monitor...")
                 break
             except Exception as e:
-                print(f"\n❌ Error: {e}")
+                print(f"\nError: {e}")
                 time.sleep(check_interval)
 
 def main():
@@ -58,7 +58,7 @@ def main():
     missing = [var for var in required_vars if not os.getenv(var)]
     
     if missing:
-        print("❌ Missing required environment variables:")
+        print("ERROR: Missing required environment variables:")
         for var in missing:
             print(f"  - {var}")
         print("\nCreate a .env file with these variables.")
@@ -66,11 +66,11 @@ def main():
     
     # Check for optional API keys
     if not os.getenv('ANTHROPIC_API_KEY'):
-        print("⚠️  Warning: ANTHROPIC_API_KEY not set - todo extraction will be disabled")
+        print("Warning: ANTHROPIC_API_KEY not set - todo extraction will be disabled")
         print("Add ANTHROPIC_API_KEY to your .env file to enable AI analysis")
     
     if not os.getenv('FIREFLIES_API_KEY'):
-        print("⚠️  Warning: FIREFLIES_API_KEY not set - transcript monitoring will be disabled")
+        print("Warning: FIREFLIES_API_KEY not set - transcript monitoring will be disabled")
         print("Add FIREFLIES_API_KEY to your .env file to enable Fireflies integration")
     
     if os.getenv('ANTHROPIC_API_KEY') or os.getenv('FIREFLIES_API_KEY'):

@@ -40,9 +40,9 @@ class TodoManager:
                 f.write("\n")
                 
                 if new_count > 0:
-                    print(f"📝 Saved {new_count} new todo(s) to {self.todo_file}")
+                    print(f"Saved {new_count} new todo(s) to {self.todo_file}")
                 else:
-                    print("📝 No new todos to save (duplicates filtered)")
+                    print("No new todos to save (duplicates filtered)")
                     
         except Exception as e:
-            print(f"❌ Error saving todos: {e}")
+            print(f"ERROR saving todos: {e}")

@@ -32,7 +32,7 @@ class FirefliesMonitor:
     def get_recent_transcripts(self, hours_back=1):
         """Fetch transcripts from the last X hours"""
         if not self.fireflies_api_key:
-            print("❌ Fireflies API key not configured")
+            print("ERROR: Fireflies API key not configured")
             return []
         
         headers = {
@@ -45,20 +45,16 @@ class FirefliesMonitor:
         
         # GraphQL query to get recent transcripts
         query = """
-        query GetRecentTranscripts($fromDate: DateTime!, $participantEmail: String) {
+        query GetRecentTranscripts($fromDate: DateTime!) {
           transcripts(
             fromDate: $fromDate
-            participant_email: $participantEmail
             limit: 20
           ) {
             id
             title
             date
             organizer_email
-            participants {
-              name
-              email
-            }
+            participants
             summary {
               action_items
               overview
@@ -66,15 +62,14 @@ class FirefliesMonitor:
             sentences {
               text
               speaker_name
-              speaker_email
+              speaker_id
             }
           }
         }
         """
         
         variables = {
-            "fromDate": from_date,
-            "participantEmail": self.user_email
+            "fromDate": from_date
         }
         
         payload = {
@@ -89,21 +84,23 @@ class FirefliesMonitor:
             data = response.json()
             
             if 'errors' in data:
-                print(f"❌ GraphQL errors: {data['errors']}")
+                print(f"ERROR GraphQL: {data['errors']}")
                 return []
             
             transcripts = data.get('data', {}).get('transcripts', [])
             return transcripts
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ Error fetching transcripts: {e}")
+            print(f"ERROR fetching transcripts: {e}")
             return []
     
     def analyze_transcript_with_claude(self, transcript):
         """Analyze transcript for Dylan-specific action items"""
         if not self.claude_client:
-            print("❌ Claude API key not configured")
+            print("ERROR: Claude API key not configured")
             return []
+        
+        # API key validation removed - will fail gracefully if invalid
         
         try:
             # Extract relevant content from transcript
@@ -119,8 +116,8 @@ class FirefliesMonitor:
             # Get sentences where Dylan is mentioned or speaking
             dylan_sentences = []
             for sentence in transcript.get('sentences', []):
-                text = sentence.get('text', '').lower()
-                speaker = sentence.get('speaker_name', '').lower()
+                text = (sentence.get('text') or '').lower()
+                speaker = (sentence.get('speaker_name') or '').lower()
                 
                 # Include if Dylan is speaking or mentioned
                 if 'dylan' in text or 'dylan' in speaker:
@@ -142,7 +139,7 @@ class FirefliesMonitor:
             {json.dumps(summary_action_items, indent=2)}
             
             Dylan-related excerpts from transcript:
-            {json.dumps(dylan_sentences[:10], indent=2)}  # Limit to first 10 for token efficiency
+            {json.dumps(dylan_sentences[:20], indent=2) if dylan_sentences else 'No Dylan mentions found'}  # Limit to first 20 for token efficiency
             
             Instructions:
             - Only extract action items that Dylan specifically needs to do
@@ -157,9 +154,36 @@ class FirefliesMonitor:
             Format your response as a simple list, one todo per line, starting each with "- "
             """
             
+            # Get all sentences but limit them for the prompt
+            all_sentences = transcript.get('sentences', [])
+            
+            # If transcript is very long, just use summary and Dylan mentions
+            if len(all_sentences) > 500:
+                # For very long transcripts, focus on Dylan mentions only
+                prompt = f"""
+                Analyze this meeting transcript and extract any action items or todos that are specifically assigned to Dylan (me).
+                
+                Meeting Details:
+                Title: {title}
+                Date: {date}
+                Organizer: {organizer}
+                
+                Existing Action Items from Summary:
+                {json.dumps(summary_action_items, indent=2)}
+                
+                Dylan-related excerpts (found {len(dylan_sentences)} mentions):
+                {json.dumps(dylan_sentences[:30], indent=2) if dylan_sentences else 'No Dylan mentions found'}
+                
+                Instructions:
+                - Only extract action items that Dylan specifically needs to do
+                - If there are no specific action items for Dylan, respond with "NO_TODOS"
+                
+                Format your response as a simple list, one todo per line, starting each with "- "
+                """
+            
             response = self.claude_client.messages.create(
-                model="claude-opus-4-20250514",
-                max_tokens=100000,
+                model="claude-3-5-sonnet-20241022",  # Use latest non-deprecated model
+                max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -173,19 +197,23 @@ class FirefliesMonitor:
             for line in result.split('\n'):
                 line = line.strip()
                 if line.startswith('- '):
-                    todos.append(line[2:].strip())
-                elif line and not line.startswith('NO_TODOS'):
-                    todos.append(line.strip())
+                    todo_text = line[2:].strip()
+                    # Filter out "no todos found" type messages
+                    if not any(phrase in todo_text.lower() for phrase in [
+                        'no action items', 'no todos', 'cannot identify', 
+                        'no specific action', 'no dylan mentions'
+                    ]):
+                        todos.append(todo_text)
             
             return todos
             
         except Exception as e:
-            print(f"❌ Error analyzing transcript with Claude: {e}")
+            print(f"ERROR analyzing transcript with Claude: {e}")
             return []
     
     def check_new_transcripts(self):
         """Check for new transcripts and extract todos"""
-        print("🎙️ Checking for new Fireflies transcripts...")
+        print("Checking for new Fireflies transcripts (all meetings)...")
         
         # Get recent transcripts
         transcripts = self.get_recent_transcripts(hours_back=1)
@@ -194,26 +222,34 @@ class FirefliesMonitor:
         new_transcripts = []
         for transcript in transcripts:
             # Parse the transcript date
-            transcript_date_str = transcript.get('date', '')
-            if transcript_date_str:
+            transcript_date_raw = transcript.get('date')
+            if transcript_date_raw:
                 try:
-                    # Try different date formats
-                    if transcript_date_str.endswith('Z'):
-                        transcript_date = datetime.fromisoformat(transcript_date_str[:-1] + '+00:00')
+                    # Check if date is a timestamp in milliseconds (integer)
+                    if isinstance(transcript_date_raw, (int, float)):
+                        transcript_date = datetime.fromtimestamp(transcript_date_raw / 1000, tz=timezone.utc)
+                    # Otherwise try to parse as ISO string
+                    elif isinstance(transcript_date_raw, str):
+                        if transcript_date_raw.endswith('Z'):
+                            transcript_date = datetime.fromisoformat(transcript_date_raw[:-1] + '+00:00')
+                        else:
+                            transcript_date = datetime.fromisoformat(transcript_date_raw)
                     else:
-                        transcript_date = datetime.fromisoformat(transcript_date_str)
+                        # Unknown format, include it anyway
+                        new_transcripts.append(transcript)
+                        continue
                     
                     # Only process if newer than last check
                     if transcript_date > self.last_transcript_check:
                         new_transcripts.append(transcript)
                 except Exception as e:
-                    print(f"⚠️ Error parsing date for transcript {transcript.get('id')}: {e}")
+                    print(f"Warning: Error parsing date for transcript {transcript.get('id')}: {e}")
                     # Include it anyway if we can't parse the date
                     new_transcripts.append(transcript)
         
         # Process new transcripts for todos
         if new_transcripts:
-            print(f"\n🔔 Found {len(new_transcripts)} new transcript(s):")
+            print(f"\nFound {len(new_transcripts)} new transcript(s):")
             for transcript in new_transcripts:
                 print(f"\n--- New Transcript ---")
                 print(f"Title: {transcript.get('title', 'Unknown')}")
@@ -222,15 +258,15 @@ class FirefliesMonitor:
                 
                 participants = transcript.get('participants', [])
                 if participants:
-                    participant_names = [p.get('name', p.get('email', 'Unknown')) for p in participants]
-                    print(f"Participants: {', '.join(participant_names[:5])}")  # Limit display
+                    # participants is now a list of email strings
+                    print(f"Participants: {', '.join(participants[:5])}")  # Limit display
                 
                 # Analyze with Claude for todos
-                print("🤖 Analyzing transcript with Claude...")
+                print("Analyzing transcript with Claude...")
                 todos = self.analyze_transcript_with_claude(transcript)
                 
                 if todos:
-                    print(f"✅ Found {len(todos)} action item(s) for Dylan:")
+                    print(f"Found {len(todos)} action item(s) for Dylan:")
                     for todo in todos:
                         print(f"  - {todo}")
                     
@@ -240,11 +276,11 @@ class FirefliesMonitor:
                     source_info = f"Extracted from Fireflies transcript: {title} [{date}]"
                     self.todo_manager.save_todos_to_file(todos, source_info)
                 else:
-                    print("ℹ️ No action items found for Dylan")
+                    print("No action items found for Dylan")
                     
                 print("-" * 50)
         else:
-            print("✓ No new transcripts found")
+            print("No new transcripts found")
         
         # Update last check time
         self.last_transcript_check = datetime.now(timezone.utc)

@@ -115,7 +115,7 @@ class EmailMonitor:
     def analyze_email_with_claude(self, email):
         """Send email to Claude for todo analysis"""
         if not self.claude_client:
-            print("❌ Claude API key not configured")
+            print("ERROR: Claude API key not configured")
             return []
         
         try:
@@ -146,7 +146,7 @@ class EmailMonitor:
             """
             
             response = self.claude_client.messages.create(
-                model="claude-opus-4-20250514",
+                model="claude-3-5-sonnet-20241022",  # Use latest non-deprecated model
                 max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -161,19 +161,23 @@ class EmailMonitor:
             for line in result.split('\n'):
                 line = line.strip()
                 if line.startswith('- '):
-                    todos.append(line[2:].strip())
-                elif line and not line.startswith('NO_TODOS'):
-                    todos.append(line.strip())
+                    todo_text = line[2:].strip()
+                    # Filter out "no todos found" type messages
+                    if not any(phrase in todo_text.lower() for phrase in [
+                        'no action items', 'no todos', 'cannot identify', 
+                        'no specific action', 'not the target'
+                    ]):
+                        todos.append(todo_text)
             
             return todos
             
         except Exception as e:
-            print(f"❌ Error analyzing email with Claude: {e}")
+            print(f"ERROR analyzing email with Claude: {e}")
             return []
     
     def check_new_emails(self):
         """Check for new emails and extract todos"""
-        print("📧 Checking for new emails...")
+        print("Checking for new emails...")
         
         # Get recent emails
         emails = self.get_recent_emails(minutes_back=1)
@@ -195,7 +199,7 @@ class EmailMonitor:
         
         # Process new emails for todos
         if new_emails:
-            print(f"\n🔔 Found {len(new_emails)} new email(s):")
+            print(f"\nFound {len(new_emails)} new email(s):")
             for email in new_emails:
                 print(f"\n--- New Email ---")
                 print(f"From: {email['from']['emailAddress']['name']} <{email['from']['emailAddress']['address']}>")
@@ -204,11 +208,11 @@ class EmailMonitor:
                 print(f"Received: {email['receivedDateTime']}")
                 
                 # Analyze with Claude for todos
-                print("🤖 Analyzing with Claude...")
+                print("Analyzing with Claude...")
                 todos = self.analyze_email_with_claude(email)
                 
                 if todos:
-                    print(f"✅ Found {len(todos)} action item(s):")
+                    print(f"Found {len(todos)} action item(s):")
                     for todo in todos:
                         print(f"  - {todo}")
                     
@@ -218,11 +222,11 @@ class EmailMonitor:
                     source_info = f"Extracted from email: {sender} - {subject}"
                     self.todo_manager.save_todos_to_file(todos, source_info)
                 else:
-                    print("ℹ️  No action items found for you")
+                    print("No action items found for you")
                     
                 print("-" * 50)
         else:
-            print(f"✓ No new emails (checked at {datetime.now().strftime('%H:%M:%S')})")
+            print(f"No new emails (checked at {datetime.now().strftime('%H:%M:%S')})")
         
         # Update last check time
         self.last_check = datetime.now(timezone.utc)
