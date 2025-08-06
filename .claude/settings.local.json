@@ -5,7 +5,10 @@
       "WebFetch(domain:docs.fireflies.ai)",
       "Bash(python:*)",
       "Bash(timeout 5 python:*)",
-      "Bash(timeout 10 python:*)"
+      "Bash(timeout 10 python:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
