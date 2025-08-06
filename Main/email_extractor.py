@@ -1,6 +1,6 @@
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from email_monitor import EmailMonitor
 from fireflies_monitor import FirefliesMonitor
@@ -12,21 +12,62 @@ class CombinedMonitor:
         self.email_monitor = EmailMonitor()
         self.fireflies_monitor = FirefliesMonitor()
     
-    def monitor_all(self, check_interval=30, check_transcripts=True):
+    def get_smart_interval(self):
+        """Get check interval based on time of day to reduce costs during off-hours"""
+        now = datetime.now()
+        hour = now.hour
+        
+        # Off-hours: 9 PM to 5 AM (21:00 to 05:00)
+        if hour >= 21 or hour < 5:
+            # Night time: check every 5 minutes (300 seconds)
+            interval = 300
+            period = "night"
+        elif hour >= 17 or hour < 9:  
+            # Evening/early morning: check every 2 minutes (120 seconds)
+            interval = 120
+            period = "evening/early morning"
+        else:
+            # Business hours (9 AM - 5 PM): check every 30 seconds
+            interval = 30
+            period = "business hours"
+            
+        return interval, period
+    
+    def monitor_all(self, check_transcripts=True):
         """Main monitoring loop for both emails and Fireflies transcripts"""
         user_email = os.getenv('USER_EMAIL', 'your email')
-        print(f"Starting combined monitor for {user_email}")
+        print(f"Starting smart-scheduled monitor for {user_email}")
         if check_transcripts:
             print(f"Monitoring: Emails + Fireflies transcripts")
         else:
             print(f"📧 Monitoring: Emails only")
-        print(f"Checking every {check_interval} seconds...\n")
+        print(f"Smart scheduling: 30s (business), 2min (evening), 5min (night)\n")
         
-        transcript_check_counter = 0  # Check transcripts less frequently
-        transcript_check_interval = 2  # Check transcripts every 2 cycles (60 seconds if email check is 30s)
+        transcript_check_counter = 0
+        last_period = ""  # Track when we switch time periods
         
         while True:
             try:
+                # Get current smart interval
+                check_interval, current_period = self.get_smart_interval()
+                
+                # Log when switching time periods
+                if current_period != last_period:
+                    current_time = datetime.now().strftime("%H:%M")
+                    print(f"🕒 {current_time} - Switched to {current_period} mode (checking every {check_interval}s)")
+                    last_period = current_period
+                
+                # Adjust transcript check frequency based on current interval
+                # During night hours (5min intervals), check transcripts every 3 cycles (15min)
+                # During evening hours (2min intervals), check transcripts every 5 cycles (10min) 
+                # During business hours (30s intervals), check transcripts every 20 cycles (10min)
+                if check_interval >= 300:  # Night mode
+                    transcript_check_interval = 3
+                elif check_interval >= 120:  # Evening mode
+                    transcript_check_interval = 5
+                else:  # Business hours
+                    transcript_check_interval = 20
+                
                 # Check for new emails
                 self.email_monitor.check_new_emails()
                 
@@ -49,6 +90,7 @@ class CombinedMonitor:
                 print("\nStopping monitor...")
                 break
             except Exception as e:
+                check_interval, _ = self.get_smart_interval()
                 print(f"\nError: {e}")
                 time.sleep(check_interval)
 
@@ -76,9 +118,9 @@ def main():
     if os.getenv('ANTHROPIC_API_KEY') or os.getenv('FIREFLIES_API_KEY'):
         print("")  # Add blank line if we showed any warnings
     
-    # Start monitoring
+    # Start monitoring with smart scheduling
     monitor = CombinedMonitor()
-    monitor.monitor_all(check_interval=30)  # Check every 30 seconds
+    monitor.monitor_all()  # Smart scheduling automatically adjusts intervals
 
 if __name__ == "__main__":
     main()
