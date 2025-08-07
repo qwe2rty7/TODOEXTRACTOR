@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -9,10 +10,27 @@ load_dotenv()
 class GoogleSheetsManager:
     def __init__(self):
         self.creds_path = os.getenv('GOOGLE_SHEETS_CREDS_PATH')
+        self.creds_json = os.getenv('GOOGLE_SHEETS_CREDS_JSON')  # For Railway - store JSON as env var
         self.sheet_id = os.getenv('GOOGLE_SHEETS_ID')
         self.enabled = False
         
-        if self.creds_path and self.sheet_id and os.path.exists(self.creds_path):
+        # Try JSON environment variable first (for Railway)
+        if self.creds_json and self.sheet_id:
+            try:
+                creds_data = json.loads(self.creds_json)
+                self.creds = service_account.Credentials.from_service_account_info(
+                    creds_data,
+                    scopes=['https://www.googleapis.com/auth/spreadsheets']
+                )
+                self.service = build('sheets', 'v4', credentials=self.creds)
+                self.sheet = self.service.spreadsheets()
+                self.enabled = True
+                print(f"✅ Google Sheets connected (via env): {self.sheet_id}")
+                self.setup_headers()
+            except Exception as e:
+                print(f"❌ Google Sheets env setup error: {e}")
+        # Fall back to file path
+        elif self.creds_path and self.sheet_id and os.path.exists(self.creds_path):
             try:
                 self.creds = service_account.Credentials.from_service_account_file(
                     self.creds_path,
@@ -21,10 +39,10 @@ class GoogleSheetsManager:
                 self.service = build('sheets', 'v4', credentials=self.creds)
                 self.sheet = self.service.spreadsheets()
                 self.enabled = True
-                print(f"✅ Google Sheets connected: {self.sheet_id}")
+                print(f"✅ Google Sheets connected (via file): {self.sheet_id}")
                 self.setup_headers()
             except Exception as e:
-                print(f"❌ Google Sheets setup error: {e}")
+                print(f"❌ Google Sheets file setup error: {e}")
     
     def setup_headers(self):
         """Set up column headers if sheet is empty"""
