@@ -14,9 +14,18 @@ class GoogleSheetsManager:
         self.sheet_id = os.getenv('GOOGLE_SHEETS_ID')
         self.enabled = False
         
+        # Debug output
+        print("\n=== Google Sheets Configuration ===")
+        print(f"GOOGLE_SHEETS_ID: {'SET' if self.sheet_id else 'NOT SET'}")
+        print(f"GOOGLE_SHEETS_CREDS_JSON: {'SET' if self.creds_json else 'NOT SET'}")
+        print(f"GOOGLE_SHEETS_CREDS_PATH: {self.creds_path or 'NOT SET'}")
+        if self.creds_path:
+            print(f"  File exists: {os.path.exists(self.creds_path)}")
+        
         # Try JSON environment variable first (for Railway)
         if self.creds_json and self.sheet_id:
             try:
+                print("Attempting to connect via GOOGLE_SHEETS_CREDS_JSON...")
                 creds_data = json.loads(self.creds_json)
                 self.creds = service_account.Credentials.from_service_account_info(
                     creds_data,
@@ -25,13 +34,14 @@ class GoogleSheetsManager:
                 self.service = build('sheets', 'v4', credentials=self.creds)
                 self.sheet = self.service.spreadsheets()
                 self.enabled = True
-                print(f"✅ Google Sheets connected (via env): {self.sheet_id}")
+                print(f"[OK] Google Sheets connected (via env): {self.sheet_id}")
                 self.setup_headers()
             except Exception as e:
-                print(f"❌ Google Sheets env setup error: {e}")
+                print(f"[ERROR] Google Sheets env setup error: {e}")
         # Fall back to file path
         elif self.creds_path and self.sheet_id and os.path.exists(self.creds_path):
             try:
+                print("Attempting to connect via file path...")
                 self.creds = service_account.Credentials.from_service_account_file(
                     self.creds_path,
                     scopes=['https://www.googleapis.com/auth/spreadsheets']
@@ -39,10 +49,17 @@ class GoogleSheetsManager:
                 self.service = build('sheets', 'v4', credentials=self.creds)
                 self.sheet = self.service.spreadsheets()
                 self.enabled = True
-                print(f"✅ Google Sheets connected (via file): {self.sheet_id}")
+                print(f"[OK] Google Sheets connected (via file): {self.sheet_id}")
                 self.setup_headers()
             except Exception as e:
-                print(f"❌ Google Sheets file setup error: {e}")
+                print(f"[ERROR] Google Sheets file setup error: {e}")
+        else:
+            print("[ERROR] Google Sheets not configured - missing credentials or sheet ID")
+            if not self.sheet_id:
+                print("  - GOOGLE_SHEETS_ID not set")
+            if not self.creds_json and not (self.creds_path and os.path.exists(self.creds_path)):
+                print("  - No valid credentials (neither JSON env var nor file path)")
+        print("===================================\n")
     
     def setup_headers(self):
         """Set up column headers if sheet is empty"""
@@ -68,10 +85,10 @@ class GoogleSheetsManager:
     def add_todos(self, todos, source_info):
         """Add todos to Google Sheet"""
         if not self.enabled:
-            print("⚠️ Google Sheets not enabled - check credentials")
+            print("[WARNING] Google Sheets not enabled - check credentials")
             return False
         if not todos:
-            print("⚠️ No todos to add to Google Sheets")
+            print("[WARNING] No todos to add to Google Sheets")
             return False
         
         try:
@@ -110,9 +127,9 @@ class GoogleSheetsManager:
                 body=body
             ).execute()
             
-            print(f"✅ Added {len(rows)} todos to Google Sheets")
+            print(f"[OK] Added {len(rows)} todos to Google Sheets")
             return True
             
         except Exception as e:
-            print(f"❌ Google Sheets append error: {e}")
+            print(f"[ERROR] Google Sheets append error: {e}")
             return False
