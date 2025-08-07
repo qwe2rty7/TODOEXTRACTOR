@@ -44,6 +44,9 @@ class EmailMonitor:
         # Initialize Google Sheets
         self.sheets_manager = GoogleSheetsManager()
         
+        # Initialize secure storage (set to None for now, can be added later)
+        self.secure_storage = None
+        
     def get_access_token(self):
         """Get access token for Graph API"""
         result = self.app.acquire_token_silent(self.scope, account=None)
