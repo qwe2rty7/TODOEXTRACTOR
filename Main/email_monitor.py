@@ -6,7 +6,6 @@ import msal
 import requests
 import anthropic
 from todo_manager import TodoManager
-from google_sheets_simple import GoogleSheetsManager
 
 load_dotenv()
 
@@ -40,12 +39,6 @@ class EmailMonitor:
         
         # Initialize todo manager
         self.todo_manager = TodoManager()
-        
-        # Initialize Google Sheets
-        self.sheets_manager = GoogleSheetsManager()
-        
-        # Initialize secure storage (set to None for now, can be added later)
-        self.secure_storage = None
         
     def get_access_token(self):
         """Get access token for Graph API"""
@@ -522,9 +515,6 @@ class EmailMonitor:
                             subject = email['subject']
                             source_info = f"Extracted from forwarded email: {subject}"
                             self.todo_manager.save_todos_to_file(simple_todos, source_info)
-                            
-                            # Add to Google Sheets
-                            self.sheets_manager.add_todos(simple_todos, source_info)
                         else:
                             print("\n❌ No action items found for you")
                         
@@ -571,9 +561,6 @@ class EmailMonitor:
                     subject = email['subject']
                     source_info = f"Extracted from email: {sender} - {subject}"
                     self.todo_manager.save_todos_to_file(simple_todos, source_info)
-                    
-                    # Add to Google Sheets
-                    self.sheets_manager.add_todos(simple_todos, source_info)
                 else:
                     print("\n❌ No action items found for you")
                     
