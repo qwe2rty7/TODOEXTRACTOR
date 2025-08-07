@@ -67,7 +67,11 @@ class GoogleSheetsManager:
     
     def add_todos(self, todos, source_info):
         """Add todos to Google Sheet"""
-        if not self.enabled or not todos:
+        if not self.enabled:
+            print("⚠️ Google Sheets not enabled - check credentials")
+            return False
+        if not todos:
+            print("⚠️ No todos to add to Google Sheets")
             return False
         
         try:
