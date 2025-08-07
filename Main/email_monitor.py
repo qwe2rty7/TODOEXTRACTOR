@@ -430,13 +430,6 @@ class EmailMonitor:
                 
             print(f"Saved {len(structured_todos)} structured todo(s) to {filepath}")
             
-            # Upload to secure storage
-            if self.secure_storage:
-                if hasattr(self.secure_storage, 'upload_todos'):
-                    self.secure_storage.upload_todos(structured_todos)
-                elif hasattr(self.secure_storage, 'save_todos'):
-                    self.secure_storage.save_todos(structured_todos)
-            
         except Exception as e:
             print(f"ERROR saving structured todos: {e}")
     
