@@ -29,6 +29,12 @@ def main():
     """Main entry point for the application"""
     logger.info("Starting Email Todo Extractor...")
     
+    # Debug environment variables first
+    import subprocess
+    print("\n=== DEBUGGING RAILWAY ENVIRONMENT ===")
+    subprocess.run([sys.executable, "debug_env.py"])
+    print("=== END DEBUG ===\n")
+    
     try:
         # Initialize monitors
         logger.info("Initializing EmailMonitor...")
