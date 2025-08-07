@@ -26,7 +26,15 @@ class GoogleSheetsManager:
         if self.creds_json and self.sheet_id:
             try:
                 print("Attempting to connect via GOOGLE_SHEETS_CREDS_JSON...")
-                creds_data = json.loads(self.creds_json)
+                print(f"JSON length: {len(self.creds_json)} chars")
+                
+                # Handle potential newline issues in Railway
+                cleaned_json = self.creds_json.replace('\\n', '\n')
+                print(f"Cleaned JSON length: {len(cleaned_json)} chars")
+                
+                creds_data = json.loads(cleaned_json)
+                print(f"Parsed JSON keys: {list(creds_data.keys())}")
+                
                 self.creds = service_account.Credentials.from_service_account_info(
                     creds_data,
                     scopes=['https://www.googleapis.com/auth/spreadsheets']
@@ -36,8 +44,13 @@ class GoogleSheetsManager:
                 self.enabled = True
                 print(f"[OK] Google Sheets connected (via env): {self.sheet_id}")
                 self.setup_headers()
+            except json.JSONDecodeError as e:
+                print(f"[ERROR] JSON parsing error: {e}")
+                print(f"First 100 chars of JSON: {self.creds_json[:100]}")
             except Exception as e:
                 print(f"[ERROR] Google Sheets env setup error: {e}")
+                import traceback
+                print(f"Full traceback: {traceback.format_exc()}")
         # Fall back to file path
         elif self.creds_path and self.sheet_id and os.path.exists(self.creds_path):
             try:
