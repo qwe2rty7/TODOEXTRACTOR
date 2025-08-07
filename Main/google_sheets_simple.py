@@ -28,8 +28,16 @@ class GoogleSheetsManager:
                 print("Attempting to connect via GOOGLE_SHEETS_CREDS_JSON...")
                 print(f"Raw JSON length: {len(self.creds_json)} chars")
                 
-                # Just try to parse it directly without any cleaning
-                creds_data = json.loads(self.creds_json)
+                # Railway adds newlines and indentation - remove them
+                import re
+                # Remove newlines followed by spaces (Railway's indentation)
+                cleaned_json = re.sub(r'\n\s+', '', self.creds_json)
+                # Remove any remaining standalone newlines
+                cleaned_json = cleaned_json.replace('\n', '')
+                
+                print(f"Cleaned JSON length: {len(cleaned_json)} chars")
+                
+                creds_data = json.loads(cleaned_json)
                 print(f"Parsed JSON successfully!")
                 print(f"JSON keys: {list(creds_data.keys())}")
                 
@@ -51,6 +59,21 @@ class GoogleSheetsManager:
                 print(f"[ERROR] Google Sheets env setup error: {e}")
                 import traceback
                 print(f"Full traceback: {traceback.format_exc()}")
+                
+                # If env var fails but we have the JSON, try creating the file for fallback
+                if self.creds_path and self.creds_json:
+                    try:
+                        print(f"Attempting to create credentials file at {self.creds_path}...")
+                        # Clean the JSON same way before writing
+                        import re
+                        cleaned_json = re.sub(r'\n\s+', '', self.creds_json)
+                        cleaned_json = cleaned_json.replace('\n', '')
+                        
+                        with open(self.creds_path, 'w') as f:
+                            f.write(cleaned_json)
+                        print(f"Created credentials file successfully")
+                    except Exception as write_error:
+                        print(f"Could not create credentials file: {write_error}")
         # Fall back to file path
         elif self.creds_path and self.sheet_id and os.path.exists(self.creds_path):
             try:
