@@ -6,7 +6,7 @@ import msal
 import requests
 import anthropic
 from todo_manager import TodoManager
-from secure_storage import PrivateGitHub, DropboxStorage, LocalEncrypted
+from google_sheets_simple import GoogleSheetsManager
 
 load_dotenv()
 
@@ -41,14 +41,8 @@ class EmailMonitor:
         # Initialize todo manager
         self.todo_manager = TodoManager()
         
-        # Initialize secure storage (use whichever is configured)
-        self.secure_storage = None
-        if os.getenv('GITHUB_PRIVATE_REPO'):
-            self.secure_storage = PrivateGitHub()
-        elif os.getenv('DROPBOX_ACCESS_TOKEN'):
-            self.secure_storage = DropboxStorage()
-        else:
-            self.secure_storage = LocalEncrypted()
+        # Initialize Google Sheets
+        self.sheets_manager = GoogleSheetsManager()
         
     def get_access_token(self):
         """Get access token for Graph API"""
@@ -525,6 +519,9 @@ class EmailMonitor:
                             subject = email['subject']
                             source_info = f"Extracted from forwarded email: {subject}"
                             self.todo_manager.save_todos_to_file(simple_todos, source_info)
+                            
+                            # Add to Google Sheets
+                            self.sheets_manager.add_todos(simple_todos, source_info)
                         else:
                             print("\n❌ No action items found for you")
                         
@@ -571,6 +568,9 @@ class EmailMonitor:
                     subject = email['subject']
                     source_info = f"Extracted from email: {sender} - {subject}"
                     self.todo_manager.save_todos_to_file(simple_todos, source_info)
+                    
+                    # Add to Google Sheets
+                    self.sheets_manager.add_todos(simple_todos, source_info)
                 else:
                     print("\n❌ No action items found for you")
                     

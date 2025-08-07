@@ -10,4 +10,5 @@ Thumbs.db
 *.log
 dist/
 build/
-structured_todos/
+structured_todos/*.json
+corded-shift-*.json
