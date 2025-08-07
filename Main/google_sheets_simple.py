@@ -26,11 +26,24 @@ class GoogleSheetsManager:
         if self.creds_json and self.sheet_id:
             try:
                 print("Attempting to connect via GOOGLE_SHEETS_CREDS_JSON...")
-                print(f"JSON length: {len(self.creds_json)} chars")
+                print(f"Raw JSON length: {len(self.creds_json)} chars")
+                print(f"First 200 chars of raw JSON: {repr(self.creds_json[:200])}")
                 
-                # Handle potential newline issues in Railway
-                cleaned_json = self.creds_json.replace('\\n', '\n')
+                # Railway inserts newlines and spaces - clean them carefully
+                import re
+                
+                # Railway adds unwanted line breaks - remove them while preserving JSON structure
+                # Remove actual newlines and carriage returns that Railway inserts
+                cleaned_json = self.creds_json.replace('\n', '').replace('\r', '')
+                
+                # Remove extra spaces but keep the JSON valid
+                cleaned_json = ' '.join(cleaned_json.split())
+                
+                # The private key's \\n should stay as \\n for JSON parsing
+                # They will be converted to actual newlines by json.loads()
+                
                 print(f"Cleaned JSON length: {len(cleaned_json)} chars")
+                print(f"First 200 chars after cleaning: {repr(cleaned_json[:200])}")
                 
                 creds_data = json.loads(cleaned_json)
                 print(f"Parsed JSON keys: {list(creds_data.keys())}")
