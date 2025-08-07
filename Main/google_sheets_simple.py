@@ -27,26 +27,11 @@ class GoogleSheetsManager:
             try:
                 print("Attempting to connect via GOOGLE_SHEETS_CREDS_JSON...")
                 print(f"Raw JSON length: {len(self.creds_json)} chars")
-                print(f"First 200 chars of raw JSON: {repr(self.creds_json[:200])}")
                 
-                # Railway inserts newlines and spaces - clean them carefully
-                import re
-                
-                # Railway adds unwanted line breaks - remove them while preserving JSON structure
-                # Remove actual newlines and carriage returns that Railway inserts
-                cleaned_json = self.creds_json.replace('\n', '').replace('\r', '')
-                
-                # Remove extra spaces but keep the JSON valid
-                cleaned_json = ' '.join(cleaned_json.split())
-                
-                # The private key's \\n should stay as \\n for JSON parsing
-                # They will be converted to actual newlines by json.loads()
-                
-                print(f"Cleaned JSON length: {len(cleaned_json)} chars")
-                print(f"First 200 chars after cleaning: {repr(cleaned_json[:200])}")
-                
-                creds_data = json.loads(cleaned_json)
-                print(f"Parsed JSON keys: {list(creds_data.keys())}")
+                # Just try to parse it directly without any cleaning
+                creds_data = json.loads(self.creds_json)
+                print(f"Parsed JSON successfully!")
+                print(f"JSON keys: {list(creds_data.keys())}")
                 
                 self.creds = service_account.Credentials.from_service_account_info(
                     creds_data,
@@ -59,7 +44,9 @@ class GoogleSheetsManager:
                 self.setup_headers()
             except json.JSONDecodeError as e:
                 print(f"[ERROR] JSON parsing error: {e}")
-                print(f"First 100 chars of JSON: {self.creds_json[:100]}")
+                print(f"Error position: {e.pos}")
+                print(f"First 500 chars of JSON: {repr(self.creds_json[:500])}")
+                print(f"Chars around error position: {repr(self.creds_json[max(0, e.pos-20):e.pos+20])}")
             except Exception as e:
                 print(f"[ERROR] Google Sheets env setup error: {e}")
                 import traceback
