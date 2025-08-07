@@ -4,12 +4,12 @@ Automatically monitors Outlook emails and Fireflies meeting transcripts to extra
 
 ## Features
 
-- 📧 Monitors Outlook emails in real-time
-- 🤖 Uses Claude AI to extract actionable todos
-- 🎯 Filters out spam and non-actionable emails
-- 📝 Saves todos to local file and JSON format
-- 🔥 Integrates with Fireflies for meeting transcripts
-- 🚀 Multiple deployment options
+- Monitors Outlook emails in real-time
+- Uses Claude AI to extract actionable todos
+- Filters out spam and non-actionable emails
+- Saves todos to local file and JSON format
+- Integrates with Fireflies for meeting transcripts
+- Multiple deployment options
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ Automatically monitors Outlook emails and Fireflies meeting transcripts to extra
 
 ## Deployment Options
 
-### 🚂 Railway (Recommended - Easiest)
+### Railway (Recommended - Easiest)
 
 1. Push to GitHub
 2. Connect repo to Railway
