@@ -1,13 +1,15 @@
 # Email Todo Extractor
 
-Automatically monitors Outlook emails and Fireflies meeting transcripts to extract and save todo items using AI.
+Automatically monitors Outlook emails and Fireflies meeting transcripts to extract and save todo items using AI, with automatic sync to Microsoft To Do.
 
 ## Features
 
 - Monitors Outlook emails in real-time
 - Uses Claude AI to extract actionable todos
+- **Syncs tasks to Microsoft To Do automatically**
 - Filters out spam and non-actionable emails
-- Saves todos to local file and JSON format
+- Saves todos to Microsoft To Do, local file, and JSON format
+- Prevents duplicate tasks with intelligent detection
 - Integrates with Fireflies for meeting transcripts
 - Multiple deployment options
 
@@ -15,7 +17,7 @@ Automatically monitors Outlook emails and Fireflies meeting transcripts to extra
 
 ### Prerequisites
 
-1. Azure App Registration with Mail.Read permissions
+1. Azure App Registration with Mail.Read and Tasks.ReadWrite permissions
 2. Anthropic API key for Claude
 3. Python 3.11+
 
@@ -73,8 +75,10 @@ FIREFLIES_API_KEY=your_fireflies_api_key  # Optional
 2. Filters spam and newsletters
 3. Sends actionable emails to Claude AI
 4. Extracts todos assigned to you
-5. Saves to `todos.txt` and JSON format
-6. Optionally checks Fireflies transcripts
+5. Creates tasks in Microsoft To Do with full context
+6. Saves backup to `todos.txt` and JSON format
+7. Prevents duplicate tasks across sessions
+8. Optionally checks Fireflies transcripts
 
 ## Project Structure
 
@@ -83,6 +87,7 @@ ToDoExtractor/
 ├── main.py                 # Entry point
 ├── Main/                   # Core application code
 │   ├── email_monitor.py    # Email monitoring logic
+│   ├── microsoft_todo_manager.py # Microsoft To Do integration
 │   ├── fireflies_monitor.py # Fireflies integration
 │   └── todo_manager.py     # Todo file management
 ├── requirements.txt        # Python dependencies
@@ -93,8 +98,9 @@ ToDoExtractor/
 
 ## Monitoring
 
+- Tasks automatically appear in Microsoft To Do app
 - Logs are saved to `email_monitor.log`
-- Todos saved to `todos.txt`
+- Backup todos saved to `todos.txt`
 - Structured data in `structured_todos/` folder
 
 ## Cost Considerations

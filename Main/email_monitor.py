@@ -6,6 +6,7 @@ import msal
 import requests
 import anthropic
 from todo_manager import TodoManager
+from microsoft_todo_manager import MicrosoftTodoManager
 
 load_dotenv()
 
@@ -37,8 +38,9 @@ class EmailMonitor:
         # Track last check time - timezone aware
         self.last_check = datetime.now(timezone.utc) - timedelta(minutes=5)
         
-        # Initialize todo manager
-        self.todo_manager = TodoManager()
+        # Initialize todo managers
+        self.todo_manager = TodoManager()  # Keep for backward compatibility
+        self.ms_todo_manager = MicrosoftTodoManager()  # New Microsoft To Do integration
         
     def get_access_token(self):
         """Get access token for Graph API"""
@@ -152,7 +154,7 @@ class EmailMonitor:
             
             # Prepare the prompt for emails without sender
             prompt = f"""
-            You are {self.user_email} analyzing a forwarded email sent TO you. Extract action items for YOU to do.
+            You are {self.user_email} analyzing an email sent TO you. Extract action items for YOU to do.
             
             IMPORTANT: This may be an email chain/thread. Focus on the LATEST/NEWEST message at the top, but use the older messages below for context to understand what's being discussed.
             
@@ -503,6 +505,19 @@ class EmailMonitor:
                             # Save structured todos with JSON format
                             self.save_structured_todos(structured_todos)
                             
+                            # Save to Microsoft To Do
+                            try:
+                                print("\n🔄 Uploading to Microsoft To Do...")
+                                success = self.ms_todo_manager.add_structured_todos(structured_todos, "Email Tasks")
+                                if success:
+                                    print("✅ Successfully uploaded to Microsoft To Do")
+                                else:
+                                    print("⚠️ Failed to upload some/all tasks to Microsoft To Do")
+                            except Exception as e:
+                                print(f"❌ Error uploading to Microsoft To Do: {e}")
+                                import traceback
+                                traceback.print_exc()
+                            
                             # Also save to text file for backward compatibility
                             simple_todos = [todo['action'] for todo in structured_todos]
                             subject = email['subject']
@@ -547,6 +562,19 @@ class EmailMonitor:
                 if structured_todos:
                     # Save structured todos with JSON format
                     self.save_structured_todos(structured_todos)
+                    
+                    # Save to Microsoft To Do
+                    try:
+                        print("\n🔄 Uploading to Microsoft To Do...")
+                        success = self.ms_todo_manager.add_structured_todos(structured_todos, "Email Tasks")
+                        if success:
+                            print("✅ Successfully uploaded to Microsoft To Do")
+                        else:
+                            print("⚠️ Failed to upload some/all tasks to Microsoft To Do")
+                    except Exception as e:
+                        print(f"❌ Error uploading to Microsoft To Do: {e}")
+                        import traceback
+                        traceback.print_exc()
                     
                     # Also save to text file for backward compatibility
                     simple_todos = [todo['action'] for todo in structured_todos]

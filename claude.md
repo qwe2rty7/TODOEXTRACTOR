@@ -51,8 +51,10 @@ Required in `.env`:
 ## Azure Setup
 
 1. Register app in Azure Portal
-2. Grant Mail.Read permissions
-3. Get admin consent
+2. Grant the following permissions:
+   - Mail.Read (for reading emails)
+   - Tasks.ReadWrite (for Microsoft To Do integration)
+3. Get admin consent for all permissions
 4. Create client secret
 
 ## Next Steps
